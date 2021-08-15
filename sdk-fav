@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+. ${SDKMAN_DIR}/bin/sdkman-init.sh
+
+readonly list_only=$1
+readonly command="ant test"
+
+
+function get_current_identifier() {
+  sdk list java | \
+  grep '| *>>> *|' | \
+  sed 's/^.* installed *| *//'
+}
+
+
+function list_identifiers() {
+  sdk list java | \
+  grep -e ' installed ' -e ' local only ' | \
+  sed -e 's/^.* installed *| *//' -e 's/^.* local only *| *//'
+}
+
+
+current_id=$(get_current_identifier)
+
+if [[ "${list_only}" == "-l" ]]; then
+  list_identifiers
+  exit 0
+fi
+
+for id in $(list_identifiers); do
+  sdk use java ${id}
+  java -version
+  ant -version
+  ${command}
+  exitcd=$?
+  if [[ ${exitcd} -gt 0 ]]; then
+    read -p "Continue? (Y/n) " userinput
+    if [ "$(echo ${userinput} | tr '[:upper:]' '[:lower:]')" == "n" ]; then
+      break
+    fi
+  fi
+done
+
+echo "Back to ${current_id}"
+sdk use java ${current_id}
